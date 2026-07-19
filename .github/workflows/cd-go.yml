@@ -1,0 +1,59 @@
+name: Go Continuous Delivery
+
+on:
+  workflow_call:
+    inputs:
+      enable-release:    { type: boolean, default: true }
+      enable-docker:     { type: boolean, default: true }
+
+      timeout-release:   { type: number,  default: 30 }
+
+      args-release:      { type: string,  default: '--clean' }
+
+      version-go:        { type: string,  default: 'stable' }
+      goprivate:         { type: string,  default: 'github.com/aleogr/*' }
+      workdir:           { type: string,  default: '.' }
+
+      registry:          { type: string,  default: 'ghcr.io' }
+      registry-username: { type: string,  default: '' }
+
+    secrets:
+      GO_MODULES_TOKEN:
+        description: 'Token for private Go modules in other repositories'
+        required: false
+      REGISTRY_PASSWORD:
+        description: 'Registry password; defaults to GITHUB_TOKEN (ghcr.io only)'
+        required: false
+
+jobs:
+  Release:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.enable-release }}
+    timeout-minutes: ${{ inputs.timeout-release }}
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - name: Cosign Setup
+        uses: aleogr/pipeline/.github/actions/cosign-setup@main
+
+      - name: Docker Setup
+        if: ${{ inputs.enable-docker }}
+        uses: aleogr/pipeline/.github/actions/docker-setup@main
+        with:
+          password: ${{ secrets.REGISTRY_PASSWORD || secrets.GITHUB_TOKEN }}
+          username: ${{ inputs.registry-username || github.actor }}
+          registry: ${{ inputs.registry }}
+
+      - name: Go Release
+        uses: aleogr/pipeline/.github/actions/go-release@main
+        with:
+          token: ${{ secrets.GO_MODULES_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          version-go: ${{ inputs.version-go }}
+          goprivate: ${{ inputs.goprivate }}
+          workdir: ${{ inputs.workdir }}
+          args: >-
+            ${{ inputs.args-release }}
+            ${{ !inputs.enable-docker && '--skip=docker' || '' }}

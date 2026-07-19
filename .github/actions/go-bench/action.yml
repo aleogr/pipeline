@@ -1,0 +1,32 @@
+name: 'Go Benchmark'
+description: 'Benchmark Go code'
+inputs:
+  token:       { description: 'Access token', required: true }
+  fetch-depth: { description: 'Fetch depth', default: 1 }
+  version-go:  { description: 'Go version', default: 'stable' }
+  goprivate:   { description: 'GOPRIVATE pattern', required: true }
+  workdir:     { description: 'Working directory', default: '.' }
+
+runs:
+  using: composite
+  steps:
+    - name: Git Setup
+      uses: aleogr/pipeline/.github/actions/git-setup@main
+      with:
+        token:       ${{ inputs.token }}
+        fetch-depth: ${{ inputs.fetch-depth }}
+
+    - name: Go Setup
+      uses: aleogr/pipeline/.github/actions/go-setup@main
+      with:
+        version-go: ${{ inputs.version-go }}
+        goprivate:  ${{ inputs.goprivate }}
+        workdir:    ${{ inputs.workdir }}
+
+    - name: Run Go benchmarks
+      shell: bash
+      working-directory: ${{ inputs.workdir }}
+      run: >
+        go test -v
+        -bench=. -benchmem -run=^$
+        ./...

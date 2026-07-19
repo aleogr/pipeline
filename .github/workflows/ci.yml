@@ -1,0 +1,23 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  CI-Go-Flat:
+    uses: ./.github/workflows/ci-go.yml
+    with:
+      workdir: examples/go-flat
+
+  CI-Go-Structured:
+    uses: ./.github/workflows/ci-go.yml
+    with:
+      workdir: examples/go-structured

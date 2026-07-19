@@ -1,0 +1,25 @@
+name: Continuous Delivery
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  CD-Go-Flat:
+    uses: ./.github/workflows/cd-go.yml
+    with:
+      workdir: examples/go-flat
+
+  CD-Go-Structured:
+    needs: CD-Go-Flat
+    uses: ./.github/workflows/cd-go.yml
+    with:
+      workdir: examples/go-structured

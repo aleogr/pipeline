@@ -1,0 +1,95 @@
+name: Go Continuous Integration
+
+on:
+  workflow_call:
+    inputs:
+      enable-lint:        { type: boolean, default: true }
+      enable-test:        { type: boolean, default: true }
+      enable-bench:       { type: boolean, default: false }
+      enable-build:       { type: boolean, default: true }
+
+      timeout-lint:       { type: number,  default: 10 }
+      timeout-test:       { type: number,  default: 15 }
+      timeout-bench:      { type: number,  default: 20 }
+      timeout-build:      { type: number,  default: 15 }
+
+      args-test:          { type: string,  default: '-race -covermode=atomic' }
+      args-build:         { type: string,  default: '--clean --snapshot --skip=docker --skip=sign' }
+
+      version-go:         { type: string,  default: 'stable' }
+      goprivate:          { type: string,  default: 'github.com/aleogr/*' }
+      workdir:            { type: string,  default: '.' }
+      retention-coverage: { type: number,  default: 7 }
+
+    secrets:
+      GO_MODULES_TOKEN:
+        description: 'Token for private Go modules in other repositories'
+        required: false
+
+jobs:
+  Lint:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.enable-lint }}
+    timeout-minutes: ${{ inputs.timeout-lint }}
+    permissions:
+      contents: read
+    steps:
+      - name: Go Lint
+        uses: aleogr/pipeline/.github/actions/go-lint@main
+        with:
+          token: ${{ secrets.GO_MODULES_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+          version-go: ${{ inputs.version-go }}
+          goprivate: ${{ inputs.goprivate }}
+          workdir: ${{ inputs.workdir }}
+
+  Test:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.enable-test }}
+    timeout-minutes: ${{ inputs.timeout-test }}
+    permissions:
+      contents: read
+    steps:
+      - name: Go Test
+        uses: aleogr/pipeline/.github/actions/go-test@main
+        with:
+          token: ${{ secrets.GO_MODULES_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+          version-go: ${{ inputs.version-go }}
+          goprivate: ${{ inputs.goprivate }}
+          workdir: ${{ inputs.workdir }}
+          retention-days: ${{ inputs.retention-coverage }}
+          args: ${{ inputs.args-test }}
+
+  Bench:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.enable-bench }}
+    timeout-minutes: ${{ inputs.timeout-bench }}
+    permissions:
+      contents: read
+    steps:
+      - name: Go Benchmark
+        uses: aleogr/pipeline/.github/actions/go-bench@main
+        with:
+          token: ${{ secrets.GO_MODULES_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+          version-go: ${{ inputs.version-go }}
+          goprivate: ${{ inputs.goprivate }}
+          workdir: ${{ inputs.workdir }}
+
+  Build:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.enable-build }}
+    timeout-minutes: ${{ inputs.timeout-build }}
+    permissions:
+      contents: read
+    steps:
+      - name: Go Build (snapshot)
+        uses: aleogr/pipeline/.github/actions/go-release@main
+        with:
+          token: ${{ secrets.GO_MODULES_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          version-go: ${{ inputs.version-go }}
+          goprivate: ${{ inputs.goprivate }}
+          workdir: ${{ inputs.workdir }}
+          args: ${{ inputs.args-build }}

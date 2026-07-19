@@ -1,0 +1,25 @@
+name: 'Go Setup'
+description: 'Set up Go environment and download modules'
+inputs:
+  version-go: { description: 'Go version', default: 'stable' }
+  goprivate:  { description: 'GOPRIVATE pattern', required: true }
+  workdir:    { description: 'Working directory', default: '.' }
+
+runs:
+  using: composite
+  steps:
+    - name: Export GOPRIVATE
+      shell: bash
+      run: echo "GOPRIVATE=${{ inputs.goprivate }}" >> "$GITHUB_ENV"
+
+    - name: Set up Go environment
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      with:
+        go-version: ${{ inputs.version-go }}
+        cache: true
+        cache-dependency-path: ${{ inputs.workdir }}/go.mod
+
+    - name: Download Go modules
+      shell: bash
+      working-directory: ${{ inputs.workdir }}
+      run: go mod download
